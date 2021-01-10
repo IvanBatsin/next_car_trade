@@ -46,6 +46,13 @@ const Nav: React.FC = (): React.ReactElement => {
               </Link>
             </Typography>
           </Button>
+          <Button>
+            <Typography>
+              <Link href="/cars">
+                <a className={classes.link}>Cars</a>
+              </Link>
+            </Typography>
+          </Button>
         </Toolbar>
       </AppBar>
     </div>

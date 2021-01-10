@@ -11,6 +11,7 @@ import { useRouter } from 'next/router';
 import Button from '@material-ui/core/Button/Button';
 import { getModels, IModel } from '../database/getModels';
 import { getAsString } from '../utils/toString';
+import axios from 'axios';
  
 const useStyles = makeStyles((theme: Theme) =>
   createStyles({
@@ -22,19 +23,20 @@ const useStyles = makeStyles((theme: Theme) =>
   }),
 );
 
-interface HomeProps {
+interface SearchProps {
   makes: IMake[],
-  models: IModel[]
+  models: IModel[],
+  singleColumn?: boolean
 }
 
 const prices = [500, 1000, 5000, 15000, 25000, 50000, 250000];
 
-const Home: React.FC<HomeProps> = ({makes, models}: HomeProps): React.ReactElement => {
+const Search: React.FC<SearchProps> = ({makes, models, singleColumn}: SearchProps): React.ReactElement => {
   const classes = useStyles();
   const router = useRouter();
-  console.log(models);
+  const smValue = singleColumn ? 12 : 6;
 
-  const [modelsArray, setModelsArray] = React.useState(models);
+  const [modelsArray, setModelsArray] = React.useState<SearchProps['models']>(models);
   const [formObj, setFormObj] = React.useState({
     make: getAsString(router.query.make) || 'All',
     model: getAsString(router.query.model) || 'All',
@@ -49,19 +51,31 @@ const Home: React.FC<HomeProps> = ({makes, models}: HomeProps): React.ReactEleme
     }));
   }
 
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    router.push({
+      pathname: '/cars',
+      query: {...formObj, page: 1}
+    }, undefined, {shallow: true});
+  }
+
   React.useEffect(() => {
     const updateModels = async function(){
-      const models = await getModels(formObj.make);
+      const {data: models} = await axios(`http://localhost:3000/api/models?make=${formObj.make}`);
       setModelsArray(models);
+      const model =  getAsString(router.query.model) || 'All';
+      handleChange('model', model);
     }
+
+    updateModels();
   }, [formObj.make]);
   return (
-    <form>
+    <form onSubmit={handleSubmit}>
       <Paper className={classes.paper} elevation={5}>
         <Grid container spacing={3}> 
-          <Grid item xs={12} sm={6}>
+          <Grid item xs={12} sm={smValue}>
             <FormControl fullWidth variant="outlined">
-              <InputLabel id="search-make">Age</InputLabel>
+              <InputLabel id="search-make">Make</InputLabel>
               <Select
                 labelId="search-make"
                 name="make"
@@ -79,7 +93,7 @@ const Home: React.FC<HomeProps> = ({makes, models}: HomeProps): React.ReactEleme
               </Select>
             </FormControl>
           </Grid>
-          <Grid item xs={12} sm={6}>
+          <Grid item xs={12} sm={smValue}>
             <FormControl fullWidth variant="outlined">
               <InputLabel id="model">Models</InputLabel>
               <Select
@@ -88,10 +102,10 @@ const Home: React.FC<HomeProps> = ({makes, models}: HomeProps): React.ReactEleme
                 value={formObj.model}
                 onChange={event => handleChange(event.target.name, event.target.value as string)}
               >
-                {models.map(model => {
+                {modelsArray.length > 0 && modelsArray.map(model => {
                   return (
-                    <MenuItem key={model.models} value={model.models}>
-                      {model.models}
+                    <MenuItem key={model.model} value={model.model}>
+                      {model.model} ({model.count})
                     </MenuItem>
                   )
                 })}
@@ -99,7 +113,7 @@ const Home: React.FC<HomeProps> = ({makes, models}: HomeProps): React.ReactEleme
               </Select>
             </FormControl>
           </Grid>
-          <Grid item xs={12} sm={6}>
+          <Grid item xs={12} sm={smValue}>
             <FormControl fullWidth variant="outlined">
               <InputLabel id="min-price">Min Price</InputLabel>
               <Select
@@ -119,9 +133,9 @@ const Home: React.FC<HomeProps> = ({makes, models}: HomeProps): React.ReactEleme
               </Select>
             </FormControl>
           </Grid>
-          <Grid item xs={12} sm={6}>
+          <Grid item xs={12} sm={smValue}>
             <FormControl fullWidth variant="outlined">
-              <InputLabel id="max-price">Min Price</InputLabel>
+              <InputLabel id="max-price">Max Price</InputLabel>
               <Select
                 labelId="max-price"
                 name="maxPrice"
@@ -140,8 +154,8 @@ const Home: React.FC<HomeProps> = ({makes, models}: HomeProps): React.ReactEleme
             </FormControl>
           </Grid>
           <Grid item xs={12} sm={12}>
-            <Button fullWidth variant="contained" color="primary">
-              Show
+            <Button type="submit" fullWidth variant="contained" color="primary">
+              Search Cars
             </Button>
           </Grid>
         </Grid>
@@ -149,7 +163,7 @@ const Home: React.FC<HomeProps> = ({makes, models}: HomeProps): React.ReactEleme
     </form>
   )
 }
-export default Home;
+export default Search;
 
 export const getServerSideProps: GetServerSideProps = async ctx => {
   const make = getAsString(ctx.query.make);

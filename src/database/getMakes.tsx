@@ -7,6 +7,6 @@ export interface IMake {
 
 export const getMakes = async() => {
   const db = await openDB();
-  const makes = await db.all<IMake[]>('select make, count(*) as count from Car group by make');
+  const makes = await db.all<IMake[]>('SELECT make, count(*) as count FROM Car GROUP BY make');
   return makes;
 }
